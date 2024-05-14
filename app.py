@@ -16,15 +16,16 @@ def upload():
         return 'Bad Request', 400
 
 def generate_frames():
-    cap = cv2.VideoCapture('received_image.jpg')
     while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        ret, buffer = cv2.imencode('.jpg', frame)
-        frame = buffer.tobytes()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        # Read the saved image
+        img = cv2.imread('received_image.jpg')
+        if img is not None:
+            ret, buffer = cv2.imencode('.jpg', img)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        else:
+            continue
 
 @app.route('/video_feed')
 def video_feed():
@@ -35,10 +36,10 @@ def index():
     return render_template_string('''
     <html>
         <head>
-            <title>ESP32-CAM Stream</title>
+            <title>MACHINESense Labs</title>
         </head>
         <body>
-            <h1>ESP32-CAM Stream</h1>
+            <h1>ESP32-CAM LiveStream</h1>
             <img src="{{ url_for('video_feed') }}">
         </body>
     </html>''')
