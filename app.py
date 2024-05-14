@@ -4,32 +4,27 @@ import numpy as np
 
 app = Flask(__name__)
 
-video_writer = None
-
 @app.route('/upload', methods=['POST'])
 def upload():
-    global video_writer
-    if video_writer is None:
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        video_writer = cv2.VideoWriter('received_stream.avi', fourcc, 20.0, (640, 480))
-
-    file = request.files['video']
-    nparr = np.frombuffer(file.read(), np.uint8)
-    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    video_writer.write(frame)
-    return 'Received', 200
+    try:
+        nparr = np.frombuffer(request.data, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        cv2.imwrite('received_image.jpg', img)  # Save the image for verification
+        return 'Received', 200
+    except Exception as e:
+        print(f"Error: {e}")
+        return 'Bad Request', 400
 
 def generate_frames():
-    cap = cv2.VideoCapture('received_stream.avi')
+    cap = cv2.VideoCapture('received_image.jpg')
     while True:
-        success, frame = cap.read()
-        if not success:
+        ret, frame = cap.read()
+        if not ret:
             break
-        else:
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        ret, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 @app.route('/video_feed')
 def video_feed():
